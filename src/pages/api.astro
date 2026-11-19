@@ -1,0 +1,65 @@
+---
+import Layout from "../layouts/Layout.astro";
+import { cveDataPath, dataUrl, url } from "../lib/base";
+import { listDataFiles, loadCves, loadLatest } from "../lib/data/repo";
+import { isDemo } from "../lib/mode";
+
+const latest = loadLatest();
+const sampleCve = loadCves()[0]?.id ?? null;
+const sampleMonth = latest.shards[0]?.month ?? null;
+const historyFile = listDataFiles()
+  .filter((f) => f.startsWith("epss/history/"))
+  .at(-1);
+const demo = isDemo();
+
+const files = [
+  { path: "latest.json", href: dataUrl("latest.json"), desc: "Newest rows (with EPSS), data update time, and the list of index shards." },
+  { path: "index/<yyyy-mm>.json", href: sampleMonth ? dataUrl(`index/${sampleMonth}.json`) : null, desc: "Compact feed rows for one month of publication: id, published, severity, CVSS, KEV, products, confidence, summary." },
+  { path: "cves/<year>/<CVE-ID>.json", href: sampleCve ? dataUrl(cveDataPath(sampleCve)) : null, desc: "Full merged record: description, CVSS v3.1/v4.0, CWE, references, KEV, matches with affected versions, change events. No EPSS." },
+  { path: "epss/current.json", href: dataUrl("epss/current.json"), desc: "CVE ID → current EPSS score, percentile and date for every tracked CVE." },
+  { path: "epss/history/<yyyy>.json", href: historyFile ? dataUrl(historyFile) : null, desc: "EPSS history points, recorded only when a score moves meaningfully: [date, score, percentile]." },
+  { path: "events/<yyyy-mm>.json", href: sampleMonth ? dataUrl(`events/${sampleMonth}.json`) : null, desc: "Change events: published, severity/CVSS changed, added to KEV, EPSS crossed 10%/50%, match upgraded." },
+  { path: "stats.json", href: dataUrl("stats.json"), desc: "Precomputed dashboard numbers." },
+  { path: "status.json", href: dataUrl("status.json"), desc: "Last run of each source with status, counts, duration and last error." },
+];
+---
+
+<Layout title="JSON API" description="Static JSON files behind cvebase.">
+  <h1 class="text-2xl font-bold tracking-tight">Static JSON API</h1>
+  <p class="soft mt-1 mb-4 max-w-3xl text-sm">
+    Every page is built from plain JSON files, published as-is under <code class="mono">{url("/data/")}</code>. There is no server: fetch them directly.
+    Times are UTC (ISO 8601). Files are validated with the zod schemas in <code class="mono">src/lib/schemas/data.ts</code>.
+    Also available: the <a href={url("/feed.xml")}>RSS feed</a> of the newest 100 CVEs.
+  </p>
+  {
+    demo && (
+      <p class="mb-4 rounded-md border p-3 text-sm" style="background:var(--demo-bg);color:var(--demo-fg);border-color:var(--demo-border)">
+        Demo stage: every file carries a <code class="mono">"notice"</code> field saying it is demo data. CVE-2099-* IDs are fictional.
+      </p>
+    )
+  }
+  <div class="card overflow-x-auto">
+    <table class="w-full min-w-[560px] text-sm">
+      <thead>
+        <tr class="muted text-left text-xs">
+          <th class="px-4 py-2 font-medium">File</th>
+          <th class="px-4 py-2 font-medium">Contents</th>
+        </tr>
+      </thead>
+      <tbody>
+        {
+          files.map((f) => (
+            <tr class="border-t border-[var(--border)] align-top">
+              <td class="px-4 py-2 whitespace-nowrap">
+                {f.href ? <a href={f.href} class="mono">data/{f.path}</a> : <span class="mono">data/{f.path}</span>}
+              </td>
+              <td class="soft px-4 py-2">{f.desc}</td>
+            </tr>
+          ))
+        }
+      </tbody>
+    </table>
+  </div>
+  <h2 class="mt-8 mb-2 text-lg font-semibold">Example</h2>
+  <pre class="card mono overflow-x-auto p-4 text-xs"><code>{`curl -s ${url("/data/latest.json")} | jq '.rows[] | select(.kev) | .id'`}</code></pre>
+</Layout>

@@ -1,0 +1,33 @@
+---
+import Changes, { type ChangeItem } from "../islands/Changes";
+import Layout from "../layouts/Layout.astro";
+import { loadSettings } from "../lib/config";
+import { primaryCvssScore } from "../lib/data/derive";
+import { loadCveMap, loadEvents } from "../lib/data/repo";
+import { productMetas } from "../lib/site-data";
+
+const settings = loadSettings();
+const cves = loadCveMap();
+const all = loadEvents();
+// The page embeds the newest events; the full history is in data/events/<yyyy-mm>.json.
+const LIMIT = 1500;
+const events: ChangeItem[] = all.slice(0, LIMIT).flatMap((e) => {
+  const c = cves.get(e.cve_id);
+  if (!c) return [];
+  return [
+    {
+      ...e,
+      products: [...new Set(c.matches.map((m) => m.productId))].sort(),
+      severity: c.severity,
+      cvss: primaryCvssScore(c),
+      summary: c.summary,
+    },
+  ];
+});
+---
+
+<Layout title="Recent changes" description="New KEV entries, severity changes, EPSS jumps and match upgrades.">
+  <h1 class="text-2xl font-bold tracking-tight">Recent changes</h1>
+  <p class="muted mb-4 text-sm">What changed on tracked CVEs: added to KEV, severity or CVSS changes, EPSS crossing 10% or 50%, and matches upgraded from Unconfirmed.</p>
+  <Changes client:load events={events} products={productMetas()} timeZone={settings.timezone} totalEvents={all.length} />
+</Layout>

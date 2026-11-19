@@ -1,0 +1,29 @@
+# cvebase settings — edited by pull request, validated in CI.
+
+site:
+  title: cvebase
+  description: Daily-refreshed CVEs affecting database engines, tooling and drivers.
+
+# Times are stored in UTC and displayed in this IANA timezone.
+timezone: Asia/Jakarta
+
+# Show a warning when the last successful run is older than this (missed daily run).
+staleAfterHours: 30
+
+# SQL injection in unrelated web apps/plugins. When true, they are collected and shown
+# under a separate "App SQLi" category, never counted in product totals.
+appSqli: false
+
+# Number of newest rows in data/latest.json (home page).
+latestCount: 200
+
+# EPSS history thinning: record a point only when the score moves at least minDelta
+# (absolute) or crosses one of the thresholds.
+epssHistory:
+  minDelta: 0.01
+  thresholds: [0.1, 0.5]
+
+# Optional sources (BRIEF §3, last phase). Not implemented in the demo stage.
+sources:
+  githubAdvisories: false
+  vendorAdvisories: false

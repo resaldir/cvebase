@@ -1,0 +1,109 @@
+---
+import { CveRow } from "../../components/CveRow";
+import Layout from "../../layouts/Layout.astro";
+import { url } from "../../lib/base";
+import { enabledProducts, loadSettings } from "../../lib/config";
+import { toIndexRow } from "../../lib/data/derive";
+import { loadCves, loadEpssCurrent } from "../../lib/data/repo";
+import { severityClass, severityLabel } from "../../lib/format";
+import { categoryLabels, type Product } from "../../lib/schemas/config";
+import { severities } from "../../lib/schemas/data";
+import { productMetaMap } from "../../lib/site-data";
+
+export function getStaticPaths() {
+  return enabledProducts().map((product) => ({ params: { id: product.id }, props: { product } }));
+}
+
+interface Props {
+  product: Product;
+}
+const { product } = Astro.props;
+const settings = loadSettings();
+const epss = loadEpssCurrent().scores;
+const products = productMetaMap();
+const cves = loadCves().filter((c) => c.category === "database" && c.matches.some((m) => m.productId === product.id));
+const rows = cves.map((c) => ({ ...toIndexRow(c), epss: epss[c.id]?.epss ?? null }));
+const counts = Object.fromEntries(severities.map((s) => [s, 0])) as Record<(typeof severities)[number], number>;
+for (const c of cves) counts[c.severity]++;
+const total = cves.length;
+const kevCount = cves.filter((c) => c.kev).length;
+const criticals = rows.filter((r) => r.severity === "CRITICAL").slice(0, 5);
+const SHOW = 50;
+const feedLink = url(`/?product=${product.id}&range=all`);
+---
+
+<Layout title={product.name} description={`CVEs affecting ${product.name}.`}>
+  <nav class="muted mb-3 text-sm" aria-label="Breadcrumb">
+    <a href={url("/products/")}>Products</a> <span aria-hidden="true">/</span> {product.name}
+  </nav>
+  <header class="mb-6">
+    <h1 class="text-2xl font-bold tracking-tight">{product.name}</h1>
+    <p class="muted text-sm">
+      {product.vendor} · {categoryLabels[product.category]} ·
+      CPE {product.cpes.map((c, i) => <>{i > 0 && ", "}<code class="mono">{c.vendor}:{c.product}</code></>)}
+      {product.cpes.some((c) => !c.verified) && <span class="badge badge-unconfirmed ml-1" title="CPE pair not yet confirmed against the NVD CPE dictionary">unverified CPE</span>}
+    </p>
+  </header>
+
+  <div class="mb-6 grid gap-4 sm:grid-cols-3">
+    <div class="card p-4">
+      <p class="muted text-xs uppercase tracking-wide">Total CVEs</p>
+      <p class="text-3xl font-bold tabular-nums">{total}</p>
+    </div>
+    <div class="card p-4">
+      <p class="muted text-xs uppercase tracking-wide">Known exploited</p>
+      <p class="text-3xl font-bold tabular-nums">{kevCount}</p>
+    </div>
+    <div class="card p-4">
+      <p class="muted mb-2 text-xs uppercase tracking-wide">By severity</p>
+      {
+        total > 0 ? (
+          <>
+            <div class="flex h-3 overflow-hidden rounded-full bg-[var(--bg-mute)]" role="img" aria-label={severities.map((s) => `${severityLabel[s]}: ${counts[s]}`).join(", ")}>
+              {severities.map((s) => counts[s] > 0 && <span class={`sev-bar-${s.toLowerCase()}`} style={`width:${(counts[s] / total) * 100}%`} />)}
+            </div>
+            <ul class="mt-2 flex flex-wrap gap-1.5">
+              {severities.map((s) => counts[s] > 0 && <li class={severityClass(s)}>{severityLabel[s]} {counts[s]}</li>)}
+            </ul>
+          </>
+        ) : (
+          <p class="muted text-sm">—</p>
+        )
+      }
+    </div>
+  </div>
+
+  {
+    total === 0 ? (
+      <div class="card px-6 py-12 text-center">
+        <p class="font-semibold">No CVEs for {product.name}</p>
+        <p class="muted mx-auto mt-1 max-w-md text-sm">Nothing on record for this product yet. New matches will appear here after the daily sync.</p>
+      </div>
+    ) : (
+      <>
+        {criticals.length > 0 && (
+          <section class="mb-6" aria-labelledby="crit-h">
+            <h2 id="crit-h" class="mb-2 text-lg font-semibold">Latest critical</h2>
+            <ul class="card overflow-hidden px-2 sm:px-3">
+              {criticals.map((r) => <CveRow row={r} products={products} timeZone={settings.timezone} />)}
+            </ul>
+          </section>
+        )}
+        <section aria-labelledby="all-h">
+          <div class="mb-2 flex flex-wrap items-baseline justify-between gap-2">
+            <h2 id="all-h" class="text-lg font-semibold">All CVEs</h2>
+            <a href={feedLink} class="text-sm">Filter in feed →</a>
+          </div>
+          <ul class="card overflow-hidden px-2 sm:px-3">
+            {rows.slice(0, SHOW).map((r) => <CveRow row={r} products={products} timeZone={settings.timezone} />)}
+          </ul>
+          {total > SHOW && (
+            <p class="mt-3 text-center text-sm">
+              Showing the newest {SHOW} of {total}. <a href={feedLink}>See all in the feed</a>
+            </p>
+          )}
+        </section>
+      </>
+    )
+  }
+</Layout>

@@ -1,0 +1,11 @@
+# Demo stage: generated data is never committed (DEMO.md §3)
+/data/
+
+node_modules/
+/dist/
+.astro/
+.env
+.env.*
+!.env.example
+.DS_Store
+*.log

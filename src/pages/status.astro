@@ -1,0 +1,101 @@
+---
+import Layout from "../layouts/Layout.astro";
+import { loadSettings } from "../lib/config";
+import { loadStatus } from "../lib/data/repo";
+import { formatDateTime } from "../lib/format";
+
+const status = loadStatus();
+const settings = loadSettings();
+const tz = settings.timezone;
+const fmt = (iso: string | null) => (iso ? formatDateTime(iso, tz) : "never");
+const failing = status.sources.filter((s) => s.status === "error");
+---
+
+<Layout title="Status" description="Last run of each data source.">
+  <h1 class="text-2xl font-bold tracking-tight">Status</h1>
+  <p class="muted mb-6 text-sm">Data refreshes once a day at 05:00 {tz} (22:00 UTC). Run logs are in GitHub Actions.</p>
+
+  <section class="card mb-6 p-4" aria-labelledby="fresh-h" data-status-card>
+    <h2 id="fresh-h" class="sr-only">Freshness</h2>
+    <div class="flex flex-wrap items-center gap-3">
+      <span data-fresh-ok class="badge" style="background:#d1fae5;color:#065f46;border-color:transparent">Up to date</span>
+      <span data-fresh-stale hidden class="badge" style="background:var(--warn-bg);color:var(--warn-fg);border-color:var(--warn-border)">Stale</span>
+      <p class="text-sm">
+        Last successful update:
+        <strong>{fmt(status.lastSuccessfulRun)}</strong>
+        {status.lastSuccessfulRun && <span class="muted">(<time data-rel={status.lastSuccessfulRun} datetime={status.lastSuccessfulRun}></time>)</span>}
+      </p>
+    </div>
+    <p data-fresh-stale-msg hidden class="mt-2 text-sm" style="color:var(--warn-fg)">
+      The data is older than {settings.staleAfterHours} hours — at least one daily run was missed or failed.
+      Check the scheduled workflow in GitHub Actions (scheduled workflows are disabled after 60 days without repository activity).
+    </p>
+    {
+      failing.length > 0 && (
+        <p class="mt-2 text-sm text-red-700 dark:text-red-400">
+          {failing.length} source{failing.length > 1 ? "s" : ""} failed on the last run. Other sources were still updated; the next run catches up from the saved cursor.
+        </p>
+      )
+    }
+  </section>
+
+  <section aria-labelledby="src-h">
+    <h2 id="src-h" class="mb-2 text-lg font-semibold">Sources</h2>
+    <ul class="grid gap-3 sm:grid-cols-2">
+      {
+        status.sources.map((s) => (
+          <li class={`card p-4 ${s.status === "error" ? "!border-red-500" : ""}`}>
+            <div class="flex items-center justify-between gap-2">
+              <h3 class="font-semibold">{s.name}</h3>
+              <span
+                class="badge"
+                style={
+                  s.status === "ok"
+                    ? "background:#d1fae5;color:#065f46;border-color:transparent"
+                    : s.status === "error"
+                      ? "background:#fee2e2;color:#991b1b;border-color:transparent"
+                      : undefined
+                }
+              >
+                {s.status === "ok" ? "OK" : s.status === "error" ? "Error" : "Skipped"}
+              </span>
+            </div>
+            <dl class="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-sm">
+              <dt class="muted">Last run</dt>
+              <dd>{fmt(s.lastRun)}</dd>
+              <dt class="muted">Last success</dt>
+              <dd>
+                {fmt(s.lastSuccess)}
+                {s.lastSuccess && (
+                  <span class="muted block text-xs">
+                    <time data-rel={s.lastSuccess} datetime={s.lastSuccess} />
+                  </span>
+                )}
+              </dd>
+              <dt class="muted">Duration</dt>
+              <dd class="tabular-nums">{s.durationMs === null ? "—" : `${(s.durationMs / 1000).toFixed(1)} s`}</dd>
+              <dt class="muted">Fetched / new / updated</dt>
+              <dd class="tabular-nums">{s.counts.fetched} / {s.counts.new} / {s.counts.updated}</dd>
+            </dl>
+            {s.error && (
+              <p class="mt-3 rounded-md bg-red-50 p-2 font-mono text-xs text-red-800 [overflow-wrap:anywhere] dark:bg-red-950 dark:text-red-200">
+                {s.error}
+              </p>
+            )}
+          </li>
+        ))
+      }
+    </ul>
+  </section>
+</Layout>
+
+<script>
+  // Staleness is computed client-side from the shared header data (site.ts).
+  const apply = (stale: boolean) => {
+    document.querySelector<HTMLElement>("[data-fresh-ok]")!.hidden = stale;
+    document.querySelector<HTMLElement>("[data-fresh-stale]")!.hidden = !stale;
+    document.querySelector<HTMLElement>("[data-fresh-stale-msg]")!.hidden = !stale;
+  };
+  apply(document.documentElement.dataset.stale === "1");
+  document.addEventListener("cvebase:staleness", (e) => apply((e as CustomEvent<{ stale: boolean }>).detail.stale));
+</script>
