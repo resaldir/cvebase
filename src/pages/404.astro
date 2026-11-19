@@ -1,0 +1,12 @@
+---
+import Layout from "../layouts/Layout.astro";
+import { url } from "../lib/base";
+---
+
+<Layout title="Not found">
+  <div class="py-16 text-center">
+    <h1 class="text-2xl font-bold">Page not found</h1>
+    <p class="muted mt-2">That CVE or page isn't tracked here.</p>
+    <p class="mt-6"><a href={url("/")} class="btn no-underline">Back to the feed</a></p>
+  </div>
+</Layout>

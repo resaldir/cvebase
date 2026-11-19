@@ -1,0 +1,292 @@
+---
+import { SeverityBadge } from "../../components/CveRow";
+import Chart from "../../islands/Chart";
+import Layout from "../../layouts/Layout.astro";
+import { cveDataPath, dataUrl, productUrl, url } from "../../lib/base";
+import { loadSettings } from "../../lib/config";
+import { describeVector } from "../../lib/cvss";
+import { loadCves, loadEpssCurrent, loadEpssHistory } from "../../lib/data/repo";
+import {
+  confidenceLabel,
+  eventLabel,
+  formatDate,
+  formatDateTime,
+  formatEpss,
+  formatEventValue,
+  formatPercentile,
+  methodLabel,
+  severityClass,
+  severityLabel,
+} from "../../lib/format";
+import { isDemo } from "../../lib/mode";
+import type { CveRecord, EpssPoint, VersionRange } from "../../lib/schemas/data";
+import { productMetaMap } from "../../lib/site-data";
+
+export function getStaticPaths() {
+  return loadCves().map((cve) => ({ params: { id: cve.id }, props: { cve } }));
+}
+
+interface Props {
+  cve: CveRecord;
+}
+const { cve } = Astro.props;
+const settings = loadSettings();
+const tz = settings.timezone;
+const products = productMetaMap();
+const epss = loadEpssCurrent().scores[cve.id] ?? null;
+const history: EpssPoint[] = [...(loadEpssHistory().get(cve.id) ?? [])];
+if (epss && history.at(-1)?.[0] !== epss.date) history.push([epss.date, epss.epss, epss.percentile]);
+const today = new Date().toISOString().slice(0, 10);
+const kevOverdue = cve.kev ? cve.kev.dueDate < today : false;
+const cvssVersions = [
+  ["CVSS v4.0", cve.cvss.v40],
+  ["CVSS v3.1", cve.cvss.v31],
+] as const;
+const demo = isDemo();
+
+function rangeText(r: VersionRange): string {
+  if (r.version) return `= ${r.version}`;
+  const lo = r.versionStartIncluding ? `≥ ${r.versionStartIncluding}` : r.versionStartExcluding ? `> ${r.versionStartExcluding}` : "";
+  const hi = r.versionEndExcluding ? `< ${r.versionEndExcluding}` : r.versionEndIncluding ? `≤ ${r.versionEndIncluding}` : "";
+  return [lo, hi].filter(Boolean).join(", ") || "all versions";
+}
+const events = [...cve.events].reverse();
+const nvdLink = demo ? "https://example.com/demo/nvd/" + cve.id : `https://nvd.nist.gov/vuln/detail/${cve.id}`;
+const cveOrgLink = demo ? "https://example.com/demo/cve-org/" + cve.id : `https://www.cve.org/CVERecord?id=${cve.id}`;
+---
+
+<Layout title={cve.id} description={cve.summary}>
+  <nav class="muted mb-3 text-sm" aria-label="Breadcrumb">
+    <a href={url("/")}>Feed</a> <span aria-hidden="true">/</span> <span class="mono">{cve.id}</span>
+  </nav>
+
+  <header class="mb-6">
+    <div class="flex flex-wrap items-center gap-2">
+      <h1 class="mono text-2xl font-bold tracking-tight sm:text-3xl">{cve.id}</h1>
+      <SeverityBadge severity={cve.severity} cvss={cve.cvss.v40?.score ?? cve.cvss.v31?.score ?? null} />
+      {cve.kev && <span class="badge badge-kev">KEV</span>}
+      {cve.category === "app_sqli" && <span class="badge badge-app">App SQLi</span>}
+      {cve.matches.length > 0 && cve.matches.every((m) => m.confidence === "LOW") && <span class="badge badge-unconfirmed">Unconfirmed</span>}
+    </div>
+    <p class="muted mt-1 text-sm">
+      Published {formatDateTime(cve.published, tz)} · Last modified {formatDateTime(cve.lastModified, tz)} · Status: {cve.vulnStatus}
+    </p>
+  </header>
+
+  <div class="grid gap-6 lg:grid-cols-3">
+    <div class="space-y-6 lg:col-span-2">
+      <section class="card p-4 sm:p-5" aria-labelledby="desc-h">
+        <h2 id="desc-h" class="mb-2 text-sm font-semibold uppercase tracking-wide muted">Description</h2>
+        <p class="prose-desc">{cve.description}</p>
+        {
+          cve.cwes.length > 0 && (
+            <p class="muted mt-3 text-sm">
+              Weakness:{" "}
+              {cve.cwes.map((w, i) => (
+                <>
+                  {i > 0 && ", "}
+                  <span class="mono">{w.id}</span>
+                  {w.name && ` — ${w.name}`}
+                </>
+              ))}
+            </p>
+          )
+        }
+      </section>
+
+      <section class="card p-4 sm:p-5" aria-labelledby="cvss-h">
+        <h2 id="cvss-h" class="mb-3 text-sm font-semibold uppercase tracking-wide muted">Severity (CVSS)</h2>
+        {
+          !cve.cvss.v31 && !cve.cvss.v40 ? (
+            <p class="text-sm">
+              <span class={severityClass("UNSCORED")}>{severityLabel.UNSCORED}</span>
+              <span class="muted ml-2">No CVSS score has been published yet. Check back after NVD or the CNA scores it.</span>
+            </p>
+          ) : (
+            <div class="space-y-5">
+              {cvssVersions.map(([label, m]) =>
+                m ? (
+                  <div>
+                    <div class="flex flex-wrap items-center gap-2">
+                      <span class="font-semibold">{label}</span>
+                      <span class={severityClass(m.severity)}>
+                        {severityLabel[m.severity]} {m.score.toFixed(1)}
+                      </span>
+                      <span class="muted text-xs">source: {m.source}</span>
+                    </div>
+                    <code class="mono mt-1 block text-xs [overflow-wrap:anywhere] soft">{m.vector}</code>
+                    <dl class="mt-2 grid grid-cols-1 gap-x-6 gap-y-1 text-sm sm:grid-cols-2">
+                      {describeVector(m.vector).map((p) => (
+                        <div class="flex justify-between gap-2 border-b border-dashed border-[var(--border)] py-0.5">
+                          <dt class="muted">{p.name}</dt>
+                          <dd class="font-medium">{p.value}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  </div>
+                ) : null,
+              )}
+            </div>
+          )
+        }
+      </section>
+
+      <section class="card p-4 sm:p-5" aria-labelledby="aff-h">
+        <h2 id="aff-h" class="mb-3 text-sm font-semibold uppercase tracking-wide muted">Affected products</h2>
+        {
+          cve.matches.length === 0 ? (
+            <p class="muted text-sm">No watched database product — listed under App SQLi (web application SQL injection).</p>
+          ) : (
+            <ul class="space-y-3">
+              {cve.matches.map((m) => (
+                <li class="border-b border-[var(--border)] pb-3 last:border-0 last:pb-0">
+                  <div class="flex flex-wrap items-center gap-2">
+                    <a href={productUrl(m.productId)} class="font-semibold">
+                      {products.get(m.productId)?.name ?? m.productId}
+                    </a>
+                    <span class={`badge ${m.confidence === "LOW" ? "badge-unconfirmed" : ""}`}>
+                      {m.confidence === "LOW" ? "Unconfirmed" : `${confidenceLabel[m.confidence]} confidence`}
+                    </span>
+                    <span class="muted text-xs">via {methodLabel[m.method]}</span>
+                  </div>
+                  {m.evidence && <p class="muted mono mt-1 text-xs [overflow-wrap:anywhere]">{m.evidence}</p>}
+                  {m.affected.length > 0 ? (
+                    <ul class="mt-1 flex flex-wrap gap-1.5">
+                      {m.affected.map((r) => (
+                        <li class="badge mono">{rangeText(r)}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p class="muted mt-1 text-sm">No affected version range published.</p>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )
+        }
+      </section>
+
+      <section class="card p-4 sm:p-5" aria-labelledby="refs-h">
+        <h2 id="refs-h" class="mb-3 text-sm font-semibold uppercase tracking-wide muted">
+          References <span class="font-normal normal-case">({cve.references.length + cve.vendorAdvisories.length + 2})</span>
+        </h2>
+        <ul class="space-y-1.5 text-sm">
+          {
+            cve.vendorAdvisories.map((a) => (
+              <li>
+                <span class="badge mr-1">Vendor advisory</span>
+                <a href={a.url} rel="noopener noreferrer" class="[overflow-wrap:anywhere]">{a.title}</a>
+              </li>
+            ))
+          }
+          <li><span class="badge mr-1">NVD</span><a href={nvdLink} rel="noopener noreferrer">{cve.id} on NVD</a></li>
+          <li><span class="badge mr-1">CVE.org</span><a href={cveOrgLink} rel="noopener noreferrer">{cve.id} on CVE.org</a></li>
+        </ul>
+        {
+          cve.references.length > 0 && (
+            <details class="mt-3" open={cve.references.length <= 10}>
+              <summary class="cursor-pointer text-sm font-medium">All {cve.references.length} references</summary>
+              <ul class="mt-2 space-y-1.5 text-sm">
+                {cve.references.map((r) => (
+                  <li class="[overflow-wrap:anywhere]">
+                    <a href={r.url} rel="noopener noreferrer">{r.url}</a>
+                    {r.tags.map((t) => <span class="badge ml-1">{t}</span>)}
+                  </li>
+                ))}
+              </ul>
+            </details>
+          )
+        }
+      </section>
+    </div>
+
+    <aside class="space-y-6">
+      <section class="card p-4" aria-labelledby="kev-h">
+        <h2 id="kev-h" class="mb-2 text-sm font-semibold uppercase tracking-wide muted">Known exploited (CISA KEV)</h2>
+        {
+          cve.kev ? (
+            <dl class="space-y-2 text-sm">
+              <div><dt class="muted">Vulnerability</dt><dd class="font-medium">{cve.kev.vulnerabilityName}</dd></div>
+              <div class="flex gap-6">
+                <div><dt class="muted">Added</dt><dd>{formatDate(cve.kev.dateAdded, tz)}</dd></div>
+                <div>
+                  <dt class="muted">Due date</dt>
+                  <dd class={kevOverdue ? "font-semibold text-red-600 dark:text-red-400" : ""}>
+                    {formatDate(cve.kev.dueDate, tz)} {kevOverdue ? "(past)" : ""}
+                  </dd>
+                </div>
+              </div>
+              <div>
+                <dt class="muted">Known ransomware use</dt>
+                <dd class={cve.kev.knownRansomwareCampaignUse === "Known" ? "font-semibold text-red-600 dark:text-red-400" : ""}>
+                  {cve.kev.knownRansomwareCampaignUse}
+                </dd>
+              </div>
+              <div><dt class="muted">Required action</dt><dd>{cve.kev.requiredAction}</dd></div>
+              {cve.kev.notes && <div><dt class="muted">Notes</dt><dd><a href={cve.kev.notes} class="[overflow-wrap:anywhere]">{cve.kev.notes}</a></dd></div>}
+            </dl>
+          ) : (
+            <p class="muted text-sm">Not in the KEV catalog.</p>
+          )
+        }
+      </section>
+
+      <section class="card p-4" aria-labelledby="epss-h">
+        <h2 id="epss-h" class="mb-2 text-sm font-semibold uppercase tracking-wide muted">EPSS</h2>
+        {
+          epss ? (
+            <>
+              <p>
+                <span class="text-2xl font-bold tabular-nums">{formatEpss(epss.epss)}</span>
+                <span class="muted ml-1 text-sm">{formatPercentile(epss.percentile)}</span>
+              </p>
+              <p class="muted text-xs">Probability of exploitation in the next 30 days · {formatDate(epss.date, tz)}</p>
+              {history.length > 1 && (
+                <div class="mt-3">
+                  <Chart
+                    client:visible
+                    ariaLabel={`EPSS history for ${cve.id}`}
+                    x={history.map((p) => Date.parse(`${p[0]}T00:00:00Z`) / 1000)}
+                    series={[{ label: "EPSS", colorVar: "--accent", values: history.map((p) => p[1]) }]}
+                    height={150}
+                    yMax={Math.max(0.1, ...history.map((p) => p[1])) > 0.5 ? 1 : undefined}
+                    yFormat="percent"
+                  />
+                </div>
+              )}
+            </>
+          ) : (
+            <p class="muted text-sm">No EPSS score yet — new CVEs are scored within about a day.</p>
+          )
+        }
+      </section>
+
+      <section class="card p-4" aria-labelledby="hist-h">
+        <h2 id="hist-h" class="mb-3 text-sm font-semibold uppercase tracking-wide muted">Change history</h2>
+        <ol class="relative ml-1 space-y-3 border-l border-[var(--border)] pl-4 text-sm">
+          {
+            events.map((e) => (
+              <li class="relative">
+                <span class="absolute -left-[21px] top-1.5 h-2 w-2 rounded-full bg-[var(--accent)]" aria-hidden="true" />
+                <p class="font-medium">
+                  {eventLabel[e.type]}
+                  {e.product_id && <span class="muted font-normal"> · {products.get(e.product_id)?.name ?? e.product_id}</span>}
+                </p>
+                {e.type !== "published" && (
+                  <p class="soft text-xs">
+                    {formatEventValue(e.type, e.old)} → {formatEventValue(e.type, e.new)}
+                  </p>
+                )}
+                <time class="muted text-xs" datetime={e.detected_at}>{formatDateTime(e.detected_at, tz)}</time>
+              </li>
+            ))
+          }
+        </ol>
+      </section>
+
+      <p class="muted text-xs">
+        JSON: <a href={dataUrl(cveDataPath(cve.id))} class="mono">data/{cveDataPath(cve.id)}</a>
+      </p>
+    </aside>
+  </div>
+</Layout>

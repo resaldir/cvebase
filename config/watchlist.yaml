@@ -1,0 +1,400 @@
+# cvebase watchlist — the database products we track.
+# Edit by pull request. CI validates this file against src/lib/schemas/config.ts.
+#
+# DEMO STAGE: every CPE pair below is an UNVERIFIED placeholder (verified: false).
+# In BRIEF phase 1, confirm each pair with `bun run cpe:discover <keyword>`
+# against the NVD CPE API and flip it to verified: true.
+#
+# Fields:
+#   id        slug, used in URLs (/products/<id>/) and data files
+#   category  relational | nosql | tooling | driver
+#   cpes      NVD CPE vendor:product pairs
+#   packages  ecosystem + package name (drivers; GitHub Advisory matching)
+#   aliases   keyword aliases for description matching (LOW confidence)
+
+products:
+  # ---------- Relational ----------
+  - id: oracle-database
+    name: Oracle Database Server
+    vendor: Oracle
+    category: relational
+    cpes:
+      - { vendor: oracle, product: database_server, verified: false }
+    aliases: [Oracle Database, Oracle DB, Oracle RDBMS]
+    enabled: true
+
+  - id: mysql
+    name: MySQL
+    vendor: Oracle
+    category: relational
+    cpes:
+      - { vendor: oracle, product: mysql, verified: false }
+      - { vendor: oracle, product: mysql_server, verified: false }
+    aliases: [MySQL, MySQL Server]
+    enabled: true
+
+  - id: mariadb
+    name: MariaDB
+    vendor: MariaDB
+    category: relational
+    cpes:
+      - { vendor: mariadb, product: mariadb, verified: false }
+    aliases: [MariaDB]
+    enabled: true
+
+  - id: percona-server
+    name: Percona Server
+    vendor: Percona
+    category: relational
+    cpes:
+      - { vendor: percona, product: percona_server, verified: false }
+    aliases: [Percona Server, Percona Server for MySQL]
+    enabled: true
+
+  - id: postgresql
+    name: PostgreSQL
+    vendor: PostgreSQL Global Development Group
+    category: relational
+    cpes:
+      - { vendor: postgresql, product: postgresql, verified: false }
+    aliases: [PostgreSQL, Postgres]
+    enabled: true
+
+  - id: edb-postgres-advanced-server
+    name: EDB Postgres Advanced Server
+    vendor: EnterpriseDB
+    category: relational
+    cpes:
+      - { vendor: enterprisedb, product: postgres_advanced_server, verified: false }
+    aliases: [EDB Postgres Advanced Server, EPAS]
+    enabled: true
+
+  - id: sql-server
+    name: Microsoft SQL Server
+    vendor: Microsoft
+    category: relational
+    cpes:
+      - { vendor: microsoft, product: sql_server, verified: false }
+    aliases: [SQL Server, MSSQL]
+    enabled: true
+
+  - id: db2
+    name: IBM Db2
+    vendor: IBM
+    category: relational
+    cpes:
+      - { vendor: ibm, product: db2, verified: false }
+    aliases: [Db2, DB2, Db2 for Linux, UNIX and Windows]
+    enabled: true
+
+  - id: sap-hana
+    name: SAP HANA
+    vendor: SAP
+    category: relational
+    cpes:
+      - { vendor: sap, product: hana, verified: false }
+    aliases: [SAP HANA, HANA database]
+    enabled: true
+
+  - id: sqlite
+    name: SQLite
+    vendor: SQLite
+    category: relational
+    cpes:
+      - { vendor: sqlite, product: sqlite, verified: false }
+    aliases: [SQLite]
+    enabled: true
+
+  - id: cockroachdb
+    name: CockroachDB
+    vendor: Cockroach Labs
+    category: relational
+    cpes:
+      - { vendor: cockroachlabs, product: cockroachdb, verified: false }
+    aliases: [CockroachDB]
+    enabled: true
+
+  - id: tidb
+    name: TiDB
+    vendor: PingCAP
+    category: relational
+    cpes:
+      - { vendor: pingcap, product: tidb, verified: false }
+    aliases: [TiDB]
+    enabled: true
+
+  # ---------- NoSQL and other ----------
+  - id: mongodb
+    name: MongoDB
+    vendor: MongoDB
+    category: nosql
+    cpes:
+      - { vendor: mongodb, product: mongodb, verified: false }
+    aliases: [MongoDB, mongod]
+    enabled: true
+
+  - id: redis
+    name: Redis
+    vendor: Redis
+    category: nosql
+    cpes:
+      - { vendor: redis, product: redis, verified: false }
+    aliases: [Redis]
+    enabled: true
+
+  - id: valkey
+    name: Valkey
+    vendor: Linux Foundation
+    category: nosql
+    cpes:
+      - { vendor: lfprojects, product: valkey, verified: false }
+    aliases: [Valkey]
+    enabled: true
+
+  - id: cassandra
+    name: Apache Cassandra
+    vendor: Apache
+    category: nosql
+    cpes:
+      - { vendor: apache, product: cassandra, verified: false }
+    aliases: [Apache Cassandra, Cassandra]
+    enabled: true
+
+  - id: couchbase-server
+    name: Couchbase Server
+    vendor: Couchbase
+    category: nosql
+    cpes:
+      - { vendor: couchbase, product: couchbase_server, verified: false }
+    aliases: [Couchbase Server, Couchbase]
+    enabled: true
+
+  - id: couchdb
+    name: Apache CouchDB
+    vendor: Apache
+    category: nosql
+    cpes:
+      - { vendor: apache, product: couchdb, verified: false }
+    aliases: [Apache CouchDB, CouchDB]
+    enabled: true
+
+  - id: elasticsearch
+    name: Elasticsearch
+    vendor: Elastic
+    category: nosql
+    cpes:
+      - { vendor: elastic, product: elasticsearch, verified: false }
+    aliases: [Elasticsearch]
+    enabled: true
+
+  - id: opensearch
+    name: OpenSearch
+    vendor: OpenSearch Project
+    category: nosql
+    cpes:
+      - { vendor: amazon, product: opensearch, verified: false }
+    aliases: [OpenSearch]
+    enabled: true
+
+  - id: neo4j
+    name: Neo4j
+    vendor: Neo4j
+    category: nosql
+    cpes:
+      - { vendor: neo4j, product: neo4j, verified: false }
+    aliases: [Neo4j]
+    enabled: true
+
+  - id: influxdb
+    name: InfluxDB
+    vendor: InfluxData
+    category: nosql
+    cpes:
+      - { vendor: influxdata, product: influxdb, verified: false }
+    aliases: [InfluxDB]
+    enabled: true
+
+  - id: clickhouse
+    name: ClickHouse
+    vendor: ClickHouse
+    category: nosql
+    cpes:
+      - { vendor: clickhouse, product: clickhouse, verified: false }
+    aliases: [ClickHouse]
+    enabled: true
+
+  - id: memcached
+    name: Memcached
+    vendor: Memcached
+    category: nosql
+    cpes:
+      - { vendor: memcached, product: memcached, verified: false }
+    aliases: [Memcached]
+    enabled: true
+
+  # ---------- Tooling ----------
+  - id: pgadmin
+    name: pgAdmin
+    vendor: pgAdmin Project
+    category: tooling
+    cpes:
+      - { vendor: pgadmin, product: pgadmin, verified: false }
+    aliases: [pgAdmin, pgAdmin 4]
+    enabled: true
+
+  - id: pgbouncer
+    name: PgBouncer
+    vendor: PgBouncer Project
+    category: tooling
+    cpes:
+      - { vendor: pgbouncer, product: pgbouncer, verified: false }
+    aliases: [PgBouncer]
+    enabled: true
+
+  - id: pgpool-ii
+    name: Pgpool-II
+    vendor: PgPool Global Development Group
+    category: tooling
+    cpes:
+      - { vendor: pgpool, product: pgpool-ii, verified: false }
+    aliases: [Pgpool-II, pgpool]
+    enabled: true
+
+  - id: patroni
+    name: Patroni
+    vendor: Zalando
+    category: tooling
+    cpes:
+      - { vendor: zalando, product: patroni, verified: false }
+    aliases: [Patroni]
+    enabled: true
+
+  - id: pgbackrest
+    name: pgBackRest
+    vendor: pgBackRest Project
+    category: tooling
+    cpes:
+      - { vendor: pgbackrest, product: pgbackrest, verified: false }
+    aliases: [pgBackRest]
+    enabled: true
+
+  - id: oracle-goldengate
+    name: Oracle GoldenGate
+    vendor: Oracle
+    category: tooling
+    cpes:
+      - { vendor: oracle, product: goldengate, verified: false }
+    aliases: [GoldenGate, Oracle GoldenGate]
+    enabled: true
+
+  - id: phpmyadmin
+    name: phpMyAdmin
+    vendor: phpMyAdmin
+    category: tooling
+    cpes:
+      - { vendor: phpmyadmin, product: phpmyadmin, verified: false }
+    aliases: [phpMyAdmin]
+    enabled: true
+
+  - id: proxysql
+    name: ProxySQL
+    vendor: ProxySQL
+    category: tooling
+    cpes:
+      - { vendor: proxysql, product: proxysql, verified: false }
+    aliases: [ProxySQL]
+    enabled: true
+
+  - id: maxscale
+    name: MariaDB MaxScale
+    vendor: MariaDB
+    category: tooling
+    cpes:
+      - { vendor: mariadb, product: maxscale, verified: false }
+    aliases: [MaxScale, MariaDB MaxScale]
+    enabled: true
+
+  # ---------- Drivers ----------
+  - id: pgjdbc
+    name: pgjdbc
+    vendor: PostgreSQL Global Development Group
+    category: driver
+    cpes:
+      - { vendor: postgresql, product: postgresql_jdbc_driver, verified: false }
+    packages:
+      - { ecosystem: maven, name: "org.postgresql:postgresql" }
+    aliases: [pgjdbc, PostgreSQL JDBC Driver]
+    enabled: true
+
+  - id: oracle-jdbc
+    name: Oracle JDBC
+    vendor: Oracle
+    category: driver
+    cpes:
+      - { vendor: oracle, product: jdbc, verified: false }
+    packages:
+      - { ecosystem: maven, name: "com.oracle.database.jdbc:ojdbc11" }
+      - { ecosystem: maven, name: "com.oracle.database.jdbc:ojdbc8" }
+    aliases: [Oracle JDBC, ojdbc]
+    enabled: true
+
+  - id: mysql-connector-j
+    name: MySQL Connector/J
+    vendor: Oracle
+    category: driver
+    cpes:
+      - { vendor: oracle, product: 'mysql_connector\/j', verified: false }
+    packages:
+      - { ecosystem: maven, name: "com.mysql:mysql-connector-j" }
+      - { ecosystem: maven, name: "mysql:mysql-connector-java" }
+    aliases: [MySQL Connector/J, Connector/J]
+    enabled: true
+
+  - id: psycopg
+    name: psycopg
+    vendor: Psycopg Project
+    category: driver
+    cpes:
+      - { vendor: psycopg, product: psycopg, verified: false }
+    packages:
+      - { ecosystem: pip, name: psycopg }
+      - { ecosystem: pip, name: psycopg2 }
+    aliases: [psycopg, psycopg2]
+    enabled: true
+
+  - id: node-postgres
+    name: node-postgres (pg)
+    vendor: node-postgres Project
+    category: driver
+    cpes:
+      - { vendor: node-postgres, product: pg, verified: false }
+    packages:
+      - { ecosystem: npm, name: pg }
+    aliases: [node-postgres]
+    enabled: true
+
+  - id: mysql2
+    name: mysql2
+    vendor: sidorares
+    category: driver
+    cpes:
+      - { vendor: sidorares, product: mysql2, verified: false }
+    packages:
+      - { ecosystem: npm, name: mysql2 }
+    aliases: [mysql2, node-mysql2]
+    enabled: true
+
+  - id: mongodb-drivers
+    name: MongoDB drivers
+    vendor: MongoDB
+    category: driver
+    cpes:
+      - { vendor: mongodb, product: node.js_driver, verified: false }
+      - { vendor: mongodb, product: pymongo, verified: false }
+    packages:
+      - { ecosystem: npm, name: mongodb }
+      - { ecosystem: pip, name: pymongo }
+      - { ecosystem: maven, name: "org.mongodb:mongodb-driver-sync" }
+      - { ecosystem: go, name: go.mongodb.org/mongo-driver }
+    aliases: [MongoDB Node.js Driver, PyMongo, MongoDB Java Driver, MongoDB Go Driver]
+    enabled: true

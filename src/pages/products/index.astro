@@ -1,0 +1,53 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import { productUrl, url } from "../../lib/base";
+import { enabledProducts, loadSettings } from "../../lib/config";
+import { loadStats } from "../../lib/data/repo";
+import { categoryLabels, productCategories } from "../../lib/schemas/config";
+
+const products = enabledProducts();
+const stats = loadStats();
+const settings = loadSettings();
+const byId = new Map(stats.byProduct.map((p) => [p.productId, p]));
+---
+
+<Layout title="Products" description="Database products on the cvebase watchlist.">
+  <h1 class="text-2xl font-bold tracking-tight">Products</h1>
+  <p class="muted mb-6 text-sm">
+    The watchlist lives in <code class="mono">config/watchlist.yaml</code> and changes by pull request.
+    {settings.appSqli && <> App SQLi CVEs are tracked separately and never counted here.</>}
+  </p>
+
+  {
+    productCategories.map((cat) => {
+      const list = products.filter((p) => p.category === cat);
+      if (!list.length) return null;
+      return (
+        <section class="mb-8" aria-labelledby={`cat-${cat}`}>
+          <h2 id={`cat-${cat}`} class="mb-2 text-lg font-semibold">{categoryLabels[cat]}</h2>
+          <ul class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {list.map((p) => {
+              const s = byId.get(p.id);
+              return (
+                <li>
+                  <a href={productUrl(p.id)} class="card flex items-center justify-between gap-3 p-3 text-[var(--fg)] no-underline hover:border-[var(--accent)]">
+                    <span class="min-w-0">
+                      <span class="block font-semibold">{p.name}</span>
+                      <span class="muted block truncate text-xs">{p.vendor}</span>
+                    </span>
+                    <span class="flex shrink-0 items-center gap-1.5 text-xs tabular-nums">
+                      {s && s.bySeverity.CRITICAL > 0 && <span class="sev sev-critical" title="Critical CVEs">{s.bySeverity.CRITICAL}</span>}
+                      {s && s.kev > 0 && <span class="badge badge-kev" title="In KEV">{s.kev} KEV</span>}
+                      <span class="badge" title="Total CVEs">{s?.total ?? 0}</span>
+                    </span>
+                  </a>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      );
+    })
+  }
+  <p class="muted text-sm">Missing a product? Add it to the watchlist in a pull request — see the <a href={url("/api/")}>API page</a> for data files.</p>
+</Layout>

@@ -1,0 +1,13 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    { "name": "dev", "runtimeExecutable": "bun", "runtimeArgs": ["run", "dev"], "port": 4321 },
+    {
+      "name": "preview",
+      "runtimeExecutable": "bun",
+      "runtimeArgs": ["run", "preview:pages"],
+      "url": "http://localhost:4321",
+      "port": 4321
+    }
+  ]
+}
